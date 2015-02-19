@@ -383,20 +383,30 @@ do_download() {
   unable_to_retrieve_package
 }
 
-#We actually unpack RPMs rather than installing them manually
-do_rpm_install() {
-  if [[ -z "$1" ]]||[[ -z "$2" ]]||[[ ! -d "$2" ]]; then
+#We actually unpack RPMs/DEBs rather than installing them manually
+do_package_install() {
+  if [ -z "$1" ]||[ -z "$2" ]||[ ! -d "$2" ]; then
     report_bug
     exit 1
   fi
-  rpm="$1"
+
+  package="$1"
   workdir="$2/rs-automations/"
+  package_type="$3"
   mkdir -p "$workdir"
   rm -rf "$workdir/ohai-solo";
-  mv "$rpm" "$workdir"
   cd "$workdir"
-  rpm=$(basename "$rpm")
-  rpm2cpio "$workdir/$rpm" | cpio -i
+  
+  # Check what type of package we have, and unpack
+  if [ "$package_type" = 'rpm' ]; then
+    rpm2cpio "$package" | cpio -i
+  elif [ "$package_type" = 'deb' ]; then
+    dpkg -x "$package" "$workdir"
+  else
+    report_bug
+    exit 1
+  fi
+
   mv "$workdir/opt/ohai-solo" "$workdir/ohai-solo"
   rmdir "$workdir/opt"
   cat > "$workdir/ohai-solo/bin/ohai-solo" << HEREDOC
@@ -407,33 +417,9 @@ export GEM_PATH=\$GEM_PATH:$workdir/ohai-solo/embedded/lib/ruby/site_ruby/2.1.0/
 export RUBYLIB=\$RUBYLIB:$workdir/ohai-solo/embedded/lib/ruby/2.1.0/:/home/rack/rs-automations/ohai-solo/embedded/lib/ruby/2.1.0/x86_64-linux
 $workdir/ohai-solo/bin/ohai -d $workdir/ohai-solo/plugins
 HEREDOC
+
   sed -i "s:#!/opt/ohai-solo/embedded/bin/ruby:#!$workdir/ohai-solo/embedded/bin/ruby:" "$workdir/ohai-solo/bin/ohai"
-  rm -f "$workdir/$rpm"
 }
-
-do_dpkg_install() {
-  if [[ -z "$1" ]]||[[ -z "$2" ]]||[[ ! -d "$2" ]]; then
-    report_bug
-    exit 1
-  fi
-  deb="$1"
-  workdir="$2/rs-automations/"
-  if [[ ! -d "$workdir" ]]; then
-    echo "No $workdir"
-    exit 1
-  fi
-  rm -rf $workdir/ohai-solo;
-  mv "$deb" "$workdir"
-  cd "$workdir"
-  deb=$(basename "$deb")
-  dpkg -x "$workdir/$deb" "$workdir"
-  tar -zxvvf data.tar.gz
-  mv "$workdir/opt/ohai-solo" "$workdir/ohai-solo"
-  rm -f "$workdir/$deb"
-  do_modify_unpacked_install "$workdir"
-}
-
-
 
 # install_file TYPE FILENAME
 # TYPE is "rpm", "deb", "solaris", or "sh"
@@ -441,12 +427,12 @@ install_file() {
   echo "Installing Ohai-Solo $version"
   case "$1" in
     "rpm")
-      echo "installing with rpm..."
-      do_rpm_install "$2" /home/rack
+      echo "installing with unpacked rpm..."
+      do_package_install "$2" /home/rack "$1"
       ;;
     "deb")
-      echo "installing with dpkg..."
-      dpkg -i "$2"
+      echo "installing with unpacked dpkg..."
+      do_package_install "$2" /home/rack "$1"
       ;;
     "solaris")
       echo "installing with pkgadd..."
