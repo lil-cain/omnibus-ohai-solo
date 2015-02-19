@@ -385,7 +385,7 @@ do_download() {
 
 #We actually unpack RPMs/DEBs rather than installing them manually
 do_package_install() {
-  if [ -z "$1" ]||[ -z "$2" ]||[ ! -d "$2" ]; then
+  if  test "$1" = ""||test "$2" = ""||test ! -d $2; then
     report_bug
     exit 1
   fi
@@ -398,9 +398,9 @@ do_package_install() {
   cd "$workdir"
   
   # Check what type of package we have, and unpack
-  if [ "$package_type" = 'rpm' ]; then
+  if test "$package_type" = 'rpm'; then
     rpm2cpio "$package" | cpio -i
-  elif [ "$package_type" = 'deb' ]; then
+  elif test "$package_type" = 'deb'; then
     dpkg -x "$package" "$workdir"
   else
     report_bug
