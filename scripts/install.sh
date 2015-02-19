@@ -385,13 +385,13 @@ do_download() {
 
 #We actually unpack RPMs/DEBs rather than installing them manually
 do_package_install() {
-  if  test "$1" = ""||test "$2" = ""||test ! -d $2; then
+  if test "$1" = ""||test "$2" = ""||test ! -d $2; then
     report_bug
     exit 1
   fi
 
   package="$1"
-  workdir="$2/rs-automations/"
+  workdir="$2/rs-automations"
   package_type="$3"
   mkdir -p "$workdir"
   rm -rf "$workdir/ohai-solo";
@@ -399,7 +399,7 @@ do_package_install() {
   
   # Check what type of package we have, and unpack
   if test "$package_type" = 'rpm'; then
-    rpm2cpio "$package" | cpio -i
+    rpm2cpio "$package" | cpio --quiet -i
   elif test "$package_type" = 'deb'; then
     dpkg -x "$package" "$workdir"
   else
