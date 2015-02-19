@@ -411,6 +411,29 @@ HEREDOC
   rm -f "$workdir/$rpm"
 }
 
+do_dpkg_install() {
+  if [[ -z "$1" ]]||[[ -z "$2" ]]||[[ ! -d "$2" ]]; then
+    report_bug
+    exit 1
+  fi
+  deb="$1"
+  workdir="$2/rs-automations/"
+  if [[ ! -d "$workdir" ]]; then
+    echo "No $workdir"
+    exit 1
+  fi
+  rm -rf $workdir/ohai-solo;
+  mv "$deb" "$workdir"
+  cd "$workdir"
+  deb=$(basename "$deb")
+  dpkg -x "$workdir/$deb" "$workdir"
+  tar -zxvvf data.tar.gz
+  mv "$workdir/opt/ohai-solo" "$workdir/ohai-solo"
+  rm -f "$workdir/$deb"
+  do_modify_unpacked_install "$workdir"
+}
+
+
 
 # install_file TYPE FILENAME
 # TYPE is "rpm", "deb", "solaris", or "sh"
