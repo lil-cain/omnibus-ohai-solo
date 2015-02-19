@@ -383,6 +383,30 @@ do_download() {
   unable_to_retrieve_package
 }
 
+#We actually unpack RPMs rather than installing them manually
+do_rpm_install() {
+  rpm="$1"
+  workdir=$2/rs-automations/
+  rm -rf $workdir/ohai-solo;
+  mv "$rpm" $workdir
+  cd $workdir
+  rpm=$(basename $rpm)
+  rpm2cpio $workdir/$rpm | cpio -i
+  mv $workdir/opt/ohai-solo $workdir/ohai-solo
+  rmdir $workdir/opt
+  cat > $workdir/ohai-solo/bin/ohai-solo << HEREDOC
+#!
+
+export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:$workdir/ohai-solo/embedded/lib/
+export GEM_PATH=\$GEM_PATH:$workdir/ohai-solo/embedded/lib/ruby/site_ruby/2.1.0/
+export RUBYLIB=\$RUBYLIB:$workdir/ohai-solo/embedded/lib/ruby/2.1.0/:/home/rack/rs-automations/ohai-solo/embedded/lib/ruby/2.1.0/x86_64-linux
+$workdir/ohai-solo/bin/ohai -d $workdir/ohai-solo/plugins
+HEREDOC
+  sed -i "s:#!/opt/ohai-solo/embedded/bin/ruby:#!$workdir/ohai-solo/embedded/bin/ruby:" $workdir/ohai-solo/bin/ohai
+  rm -f $workdir/$rpm
+}
+
+
 # install_file TYPE FILENAME
 # TYPE is "rpm", "deb", "solaris", or "sh"
 install_file() {
@@ -390,7 +414,7 @@ install_file() {
   case "$1" in
     "rpm")
       echo "installing with rpm..."
-      rpm -Uvh --nodeps --oldpackage --replacepkgs "$2"
+      do_rpm_install "$2" /home/rack
       ;;
     "deb")
       echo "installing with dpkg..."
