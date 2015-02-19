@@ -385,16 +385,21 @@ do_download() {
 
 #We actually unpack RPMs rather than installing them manually
 do_rpm_install() {
+  if [[ -z "$1" ]]||[[ -z "$2" ]]||[[ ! -d "$2" ]]; then
+    report_bug
+    exit 1
+  fi
   rpm="$1"
-  workdir=$2/rs-automations/
-  rm -rf $workdir/ohai-solo;
-  mv "$rpm" $workdir
-  cd $workdir
-  rpm=$(basename $rpm)
-  rpm2cpio $workdir/$rpm | cpio -i
-  mv $workdir/opt/ohai-solo $workdir/ohai-solo
-  rmdir $workdir/opt
-  cat > $workdir/ohai-solo/bin/ohai-solo << HEREDOC
+  workdir="$2/rs-automations/"
+  mkdir -p "$workdir"
+  rm -rf "$workdir/ohai-solo";
+  mv "$rpm" "$workdir"
+  cd "$workdir"
+  rpm=$(basename "$rpm")
+  rpm2cpio "$workdir/$rpm" | cpio -i
+  mv "$workdir/opt/ohai-solo" "$workdir/ohai-solo"
+  rmdir "$workdir/opt"
+  cat > "$workdir/ohai-solo/bin/ohai-solo" << HEREDOC
 #!
 
 export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:$workdir/ohai-solo/embedded/lib/
@@ -402,8 +407,8 @@ export GEM_PATH=\$GEM_PATH:$workdir/ohai-solo/embedded/lib/ruby/site_ruby/2.1.0/
 export RUBYLIB=\$RUBYLIB:$workdir/ohai-solo/embedded/lib/ruby/2.1.0/:/home/rack/rs-automations/ohai-solo/embedded/lib/ruby/2.1.0/x86_64-linux
 $workdir/ohai-solo/bin/ohai -d $workdir/ohai-solo/plugins
 HEREDOC
-  sed -i "s:#!/opt/ohai-solo/embedded/bin/ruby:#!$workdir/ohai-solo/embedded/bin/ruby:" $workdir/ohai-solo/bin/ohai
-  rm -f $workdir/$rpm
+  sed -i "s:#!/opt/ohai-solo/embedded/bin/ruby:#!$workdir/ohai-solo/embedded/bin/ruby:" "$workdir/ohai-solo/bin/ohai"
+  rm -f "$workdir/$rpm"
 }
 
 
